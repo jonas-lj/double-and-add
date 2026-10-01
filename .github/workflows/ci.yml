@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build
+      - run: cargo clippy -- -D warnings
+      - run: cargo fmt --check
+
+  # Regenerates the Lean translation with Charon and Aeneas and fails if it differs from the
+  # committed `lean/DoubleAndAdd.lean`, so the proofs never describe stale code.
+  translation-up-to-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            extra-substituters = https://hacl.cachix.org
+            extra-trusted-public-keys = hacl.cachix.org-1:FzsZ2xsByOwKwIWNPII7yMOelJNDZ12mDAj3d1eGX0c=
+      # Use the same Aeneas commit as the Lean library pinned in the Lake manifest.
+      - name: Build Charon and Aeneas
+        run: |
+          rev=$(jq -r '.packages[] | select(.name == "aeneas") | .rev' lean/lake-manifest.json)
+          nix build -L "github:AeneasVerif/aeneas/$rev#aeneas" -o "$RUNNER_TEMP/aeneas"
+      - name: Regenerate the Lean translation
+        run: |
+          "$RUNNER_TEMP/aeneas/bin/charon" cargo --preset=aeneas --dest-file "$RUNNER_TEMP/double_and_add.llbc"
+          "$RUNNER_TEMP/aeneas/bin/aeneas" -backend lean -dest lean "$RUNNER_TEMP/double_and_add.llbc"
+      - name: Check the translation is unchanged
+        run: git diff --exit-code lean/DoubleAndAdd.lean
+
+  proofs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the translation and the proofs
+        uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean
+      # `sorry` is only a warning, so check explicitly that the main theorem doesn't depend on it.
+      - name: Check for sorry
+        working-directory: lean
+        run: |
+          echo 'import DoubleAndAddSpec
+          #print axioms double_and_add.double_and_add_spec' > "$RUNNER_TEMP/Axioms.lean"
+          lake env lean "$RUNNER_TEMP/Axioms.lean" | tee "$RUNNER_TEMP/axioms.txt"
+          ! grep -q sorryAx "$RUNNER_TEMP/axioms.txt"
