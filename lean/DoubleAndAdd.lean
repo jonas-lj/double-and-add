@@ -40,27 +40,25 @@ structure num_traits.identities.Zero (Self : Type) where
   is_zero : Self → Result Bool
 
 /-- [double_and_add::double_and_add]:
-    Source: 'src/lib.rs', lines 9:0-25:1
+    Source: 'src/lib.rs', lines 9:0-23:1
     Visibility: public -/
 def double_and_add
   {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
-  (corecloneCloneInst : core.clone.Clone T) (base : T) (scalar : Std.U64) :
+  (coremarkerCopyInst : core.marker.Copy T) (base : T) (scalar : Std.U64) :
   Result T
   := do
-  match scalar with
-  | 0#uscalar => num_traitsidentitiesZeroInst.zero
-  | _ =>
-    let i ← scalar >>> 1#i32
+  if scalar = 0#u64
+  then num_traitsidentitiesZeroInst.zero
+  else
+    let i ← scalar / 2#u64
     let half ←
-      double_and_add num_traitsidentitiesZeroInst corecloneCloneInst base i
-    let t ← corecloneCloneInst.clone half
-    let doubled ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add t half
-    let i1 ← lift (scalar &&& 1#u64)
+      double_and_add num_traitsidentitiesZeroInst coremarkerCopyInst base i
+    let i1 ← scalar % 2#u64
     if i1 = 1#u64
     then
-      let t1 ← corecloneCloneInst.clone base
-      num_traitsidentitiesZeroInst.coreopsarithAddInst.add doubled t1
-    else ok doubled
+      let t ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add half half
+      num_traitsidentitiesZeroInst.coreopsarithAddInst.add t base
+    else num_traitsidentitiesZeroInst.coreopsarithAddInst.add half half
 partial_fixpoint
 
 end double_and_add
