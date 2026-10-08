@@ -1,4 +1,4 @@
-import DoubleAndAddSpec
+import DoubleAndAddAssumptions
 import DoubleAndAddTranslation
 
 /-!
@@ -7,8 +7,9 @@ The Aeneas translation in `DoubleAndAdd.lean` agrees with the hand-written trans
 the Aeneas function succeeds and returns the same value as the hand-written one.
 
 The proof follows the two definitions step by step and never uses what they compute, so it
-shows that the hand-written translation is a faithful reading of the Rust code. As a
-consequence, correctness of the hand-written translation carries over to the Aeneas one.
+shows that the hand-written translation is a faithful reading of the Rust code. This is the only
+proof about the Aeneas translation: correctness of the hand-written translation carries over to
+it in `DoubleAndAddSpec.lean`.
 -/
 
 open Aeneas Aeneas.Std Result
@@ -44,12 +45,5 @@ theorem double_and_add_eq_doubleAndAdd (zeroInst : num_traits.identities.Zero T)
     by_cases ho : n.val % 2 = 1
     · simp [hodd.mpr ho, ho, hrec]
     · simp [mt hodd.mp ho, Nat.mod_two_ne_one.mp ho, hrec]
-
-/-- Correctness of the Aeneas translation, derived from correctness of the hand-written one. -/
-theorem double_and_add_spec' (zeroInst : num_traits.identities.Zero T)
-    (copyInst : core.marker.Copy T) (h : ImplementsAddMonoid zeroInst) (base : T) (n : U64) :
-    double_and_add zeroInst copyInst base n = ok (n.val • base) := by
-  rw [double_and_add_eq_doubleAndAdd zeroInst copyInst h,
-    DoubleAndAddTranslation.doubleAndAdd_spec]
 
 end double_and_add

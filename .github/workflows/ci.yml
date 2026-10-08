@@ -42,16 +42,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build the translation and the proofs
+      - name: Set up Lean and fetch the Mathlib cache
         uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
+          build: false
+      - name: Build the hand-written translation and its correctness proof
+        working-directory: lean
+        run: lake build DoubleAndAddTranslation
+      # The only proof that depends on the shape of the Aeneas translation. It fails exactly when the
+      # Rust code no longer matches the hand-written translation in `DoubleAndAddTranslation.lean`.
+      - name: Check the Aeneas translation is equivalent to the hand-written one
+        working-directory: lean
+        run: |
+          if ! lake build DoubleAndAddEquiv; then
+            echo "::error file=lean/DoubleAndAddEquiv.lean,title=Translations not equivalent::The Aeneas translation of src/lib.rs (lean/DoubleAndAdd.lean) can no longer be proven equivalent to the hand-written translation in lean/DoubleAndAddTranslation.lean. Update the hand-written translation to match the Rust code."
+            exit 1
+          fi
+      - name: Build the remaining proofs
+        working-directory: lean
+        run: lake build
       # `sorry` is only a warning, so check explicitly that the main theorems don't depend on it.
       - name: Check for sorry
         working-directory: lean
         run: |
           echo 'import DoubleAndAddSpec
-          import DoubleAndAddEquiv
           #print axioms double_and_add.double_and_add_spec
           #print axioms double_and_add.double_and_add_eq_doubleAndAdd' > "$RUNNER_TEMP/Axioms.lean"
           lake env lean "$RUNNER_TEMP/Axioms.lean" | tee "$RUNNER_TEMP/axioms.txt"
