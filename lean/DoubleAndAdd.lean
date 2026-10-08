@@ -62,7 +62,7 @@ def double_and_add
 partial_fixpoint
 
 /-- [double_and_add::multi_scalar_mul]: loop body 0:
-    Source: 'src/lib.rs', lines 33:4-35:5
+    Source: 'src/lib.rs', lines 36:4-38:5
     Visibility: public -/
 @[rust_loop_body]
 def multi_scalar_mul_loop.body
@@ -88,7 +88,7 @@ def multi_scalar_mul_loop.body
     ok (cont (iter1, acc1))
 
 /-- [double_and_add::multi_scalar_mul]: loop 0:
-    Source: 'src/lib.rs', lines 33:4-35:5
+    Source: 'src/lib.rs', lines 36:4-38:5
     Visibility: public -/
 @[rust_loop]
 def multi_scalar_mul_loop
@@ -104,7 +104,7 @@ def multi_scalar_mul_loop
     (iter, acc)
 
 /-- [double_and_add::multi_scalar_mul]:
-    Source: 'src/lib.rs', lines 28:0-37:1
+    Source: 'src/lib.rs', lines 30:0-40:1
     Visibility: public -/
 def multi_scalar_mul
   {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
@@ -112,13 +112,16 @@ def multi_scalar_mul
   (scalars : Slice Std.U64) :
   Result T
   := do
+  let i := Slice.len points
+  let i1 := Slice.len scalars
+  massert (i = i1)
   let acc ← num_traitsidentitiesZeroInst.zero
-  let i ← core.slice.Slice.iter points
+  let i2 ← core.slice.Slice.iter points
   let iter ←
     core.iter.traits.iterator.Iterator.zip.trait_default
       (core.iter.traits.iterator.IteratorSliceIter T)
-      (SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter Std.U64) i
-      scalars
+      (SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter Std.U64)
+      i2 scalars
   multi_scalar_mul_loop num_traitsidentitiesZeroInst coremarkerCopyInst iter
     acc
 

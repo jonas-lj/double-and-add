@@ -44,15 +44,18 @@ theorem double_and_add_spec [ImplementsAddMonoid zeroInst] (base : T) (n : U64) 
       omega
 
 /-- Correctness of multi-scalar multiplication: for any type whose `Zero` instance implements an
-additive monoid, `multi_scalar_mul points scalars` succeeds and returns
-`∑ i, scalars[i] • points[i]`, over the indices of the shorter slice. -/
+additive monoid, if `points` and `scalars` have the same length, `multi_scalar_mul points scalars`
+succeeds and returns `∑ i, scalars[i] • points[i]`. -/
 theorem multi_scalar_mul_spec [ImplementsAddMonoid zeroInst] (points : Slice T)
     (scalars : Slice U64) :
+    points.length = scalars.length →
     multi_scalar_mul zeroInst copyInst points scalars =
       ok ((points.val.zip scalars.val).map (fun (point, scalar) => scalar.val • point)).sum := by
+  intro hlen
   set terms := (points.val.zip scalars.val).map (fun (point, scalar) => scalar.val • point)
+  have hlen' : Slice.len points = Slice.len scalars := UScalar.eq_of_val_eq (by simp [hlen])
   unfold multi_scalar_mul multi_scalar_mul_loop
-  simp only [ImplementsAddMonoid.zero_ok, core.slice.Slice.iter, core.iter.traits.iterator.Iterator.zip.trait_default,
+  simp only [hlen', massert, ↓reduceIte, ImplementsAddMonoid.zero_ok, core.slice.Slice.iter, core.iter.traits.iterator.Iterator.zip.trait_default,
     core.iter.traits.iterator.Iterator.zip.default,
     SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter.into_iter, bind_ok, bind_tc_ok]
   apply eq_ok_of_spec
@@ -84,5 +87,15 @@ theorem multi_scalar_mul_spec [ImplementsAddMonoid zeroInst] (points : Slice T)
       simp [hp, WP.spec_ok]
       simpa [hnil] using hacc
   · simp
+
+omit [AddMonoid T] in
+/-- `multi_scalar_mul` panics if `points` and `scalars` have different lengths. -/
+theorem multi_scalar_mul_length_mismatch (points : Slice T) (scalars : Slice U64) :
+    points.length ≠ scalars.length →
+    multi_scalar_mul zeroInst copyInst points scalars = fail .assertionFailure := by
+  intro hlen
+  have hlen' : Slice.len points ≠ Slice.len scalars := fun e => hlen (by
+    simpa using congrArg UScalar.val e)
+  simp [multi_scalar_mul, massert, hlen']
 
 end double_and_add

@@ -24,11 +24,14 @@ where
 
 /// Computes the multi-scalar multiplication `scalars[0] * points[0] + scalars[1] * points[1] + ...`.
 ///
-/// Extra points or scalars, if the slices have different lengths, are ignored.
+/// # Panics
+///
+/// Panics if `points` and `scalars` have different lengths.
 pub fn multi_scalar_mul<T>(points: &[T], scalars: &[u64]) -> T
 where
     T: Zero + Copy,
 {
+    assert!(points.len() == scalars.len());
     let mut acc = T::zero();
     for (&point, &scalar) in points.iter().zip(scalars) {
         acc = acc + double_and_add(point, scalar);
