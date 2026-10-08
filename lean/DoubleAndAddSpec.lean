@@ -13,10 +13,39 @@ open Lean Elab Command
 /-- The axioms the proofs may depend on: Lean's standard axioms. -/
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 
-/-- `#check_axioms foo` fails if `foo` depends on an axiom that is not in `allowedAxioms`. -/
+/-- The axioms that `root` depends on, and the theorems it depends on whose proofs failed. Lean
+records a proof that fails with an automatically inserted (synthetic) `sorry`. The search stops at
+such a theorem, so `sorryAx` among the axioms means a hand-written `sorry`. -/
+def collectDependencies (env : Environment) (root : Name) : Array Name × Array Name := Id.run do
+  let mut visited : NameSet := {}
+  let mut axs := #[]
+  let mut failed := #[]
+  let mut todo := #[root]
+  while !todo.isEmpty do
+    let n := todo.back!
+    todo := todo.pop
+    if visited.contains n then continue
+    visited := visited.insert n
+    let some info := env.find? n | continue
+    if info matches .axiomInfo _ then
+      axs := axs.push n
+    else if (info.value? (allowOpaque := true)).any (·.hasSyntheticSorry) then
+      failed := failed.push n
+    else
+      todo := todo ++ info.type.getUsedConstants
+      if let some value := info.value? (allowOpaque := true) then
+        todo := todo ++ value.getUsedConstants
+  return (axs, failed)
+
+/-- `#check_axioms foo` fails if `foo` depends on an axiom that is not in `allowedAxioms`, or on a
+theorem whose proof failed. If the proof of `foo` itself failed, Lean has already reported it. -/
 elab "#check_axioms " thm:ident : command => do
   let constName ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo thm
-  let axs ← liftCoreM <| collectAxioms constName
+  let (axs, failed) := collectDependencies (← getEnv) constName
+  if failed.any (constName.isPrefixOf ·) then return
+  unless failed.isEmpty do
+    let failed := failed.map privateToUserName
+    logError m!"'{constName}' depends on theorems whose proofs failed: {failed}"
   let disallowed := axs.filter (· ∉ allowedAxioms)
   unless disallowed.isEmpty do
     logError m!"'{constName}' depends on disallowed axioms: {disallowed}"
