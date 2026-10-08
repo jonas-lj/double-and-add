@@ -46,11 +46,13 @@ jobs:
         uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
-      # `sorry` is only a warning, so check explicitly that the main theorem doesn't depend on it.
+      # `sorry` is only a warning, so check explicitly that the main theorems don't depend on it.
       - name: Check for sorry
         working-directory: lean
         run: |
           echo 'import DoubleAndAddSpec
-          #print axioms double_and_add.double_and_add_spec' > "$RUNNER_TEMP/Axioms.lean"
+          import DoubleAndAddEquiv
+          #print axioms double_and_add.double_and_add_spec
+          #print axioms double_and_add.double_and_add_eq_doubleAndAdd' > "$RUNNER_TEMP/Axioms.lean"
           lake env lean "$RUNNER_TEMP/Axioms.lean" | tee "$RUNNER_TEMP/axioms.txt"
           ! grep -q sorryAx "$RUNNER_TEMP/axioms.txt"
