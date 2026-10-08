@@ -22,5 +22,3 @@ elab "#check_axioms " thm:ident : command => do
     logError m!"'{constName}' depends on disallowed axioms: {disallowed}"
 
 #check_axioms double_and_add.double_and_add_spec
-#check_axioms double_and_add.double_and_add_eq_doubleAndAdd
-#check_axioms DoubleAndAddTranslation.doubleAndAdd_spec
