@@ -126,7 +126,7 @@ def multi_scalar_mul
     acc
 
 /-- [double_and_add::windowed_msm]: loop body 1:
-    Source: 'src/lib.rs', lines 64:8-66:9
+    Source: 'src/lib.rs', lines 63:8-65:9
     Visibility: public -/
 @[rust_loop_body]
 def windowed_msm_loop0_loop0.body
@@ -143,7 +143,7 @@ def windowed_msm_loop0_loop0.body
     ok (cont (iter1, acc1))
 
 /-- [double_and_add::windowed_msm]: loop 1:
-    Source: 'src/lib.rs', lines 64:8-66:9
+    Source: 'src/lib.rs', lines 63:8-65:9
     Visibility: public -/
 @[rust_loop]
 def windowed_msm_loop0_loop0
@@ -157,7 +157,7 @@ def windowed_msm_loop0_loop0
     (iter, acc)
 
 /-- [double_and_add::windowed_msm]: loop body 2:
-    Source: 'src/lib.rs', lines 67:8-70:9
+    Source: 'src/lib.rs', lines 66:8-69:9
     Visibility: public -/
 @[rust_loop_body]
 def windowed_msm_loop0_loop1.body
@@ -187,7 +187,7 @@ def windowed_msm_loop0_loop1.body
     ok (cont (iter1, acc1))
 
 /-- [double_and_add::windowed_msm]: loop 2:
-    Source: 'src/lib.rs', lines 67:8-70:9
+    Source: 'src/lib.rs', lines 66:8-69:9
     Visibility: public -/
 @[rust_loop]
 def windowed_msm_loop0_loop1
@@ -203,7 +203,7 @@ def windowed_msm_loop0_loop1
     (iter, acc)
 
 /-- [double_and_add::windowed_msm]: loop body 0:
-    Source: 'src/lib.rs', lines 62:4-71:5
+    Source: 'src/lib.rs', lines 61:4-70:5
     Visibility: public -/
 @[rust_loop_body]
 def windowed_msm_loop0.body
@@ -230,7 +230,7 @@ def windowed_msm_loop0.body
   else ok (done acc)
 
 /-- [double_and_add::windowed_msm]: loop 0:
-    Source: 'src/lib.rs', lines 62:4-71:5
+    Source: 'src/lib.rs', lines 61:4-70:5
     Visibility: public -/
 @[rust_loop]
 def windowed_msm_loop0
@@ -245,7 +245,7 @@ def windowed_msm_loop0
     (acc, window)
 
 /-- [double_and_add::windowed_msm]:
-    Source: 'src/lib.rs', lines 50:0-73:1
+    Source: 'src/lib.rs', lines 50:0-72:1
     Visibility: public -/
 def windowed_msm
   {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
