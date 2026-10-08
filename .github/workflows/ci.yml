@@ -36,18 +36,29 @@ jobs:
           "$RUNNER_TEMP/aeneas/bin/charon" cargo --preset=aeneas --dest-file "$RUNNER_TEMP/double_and_add.llbc"
           "$RUNNER_TEMP/aeneas/bin/aeneas" -backend lean -dest lean "$RUNNER_TEMP/double_and_add.llbc"
       - name: Check the translation is unchanged
-        run: git diff --exit-code lean/DoubleAndAdd.lean
+        run: |
+          if ! git diff --exit-code lean/DoubleAndAdd.lean; then
+            echo "::error file=lean/DoubleAndAdd.lean,title=Lean translation out of date::lean/DoubleAndAdd.lean does not match src/lib.rs. Regenerate it with Charon and Aeneas at the commit pinned in lean/lake-manifest.json and commit the result."
+            exit 1
+          fi
 
+  # Builds the specs in `lean/DoubleAndAddSpec.lean`, which also checks their axioms. Lean errors
+  # are reported as annotations on the failing line.
   proofs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build the translation and the proofs
+      - name: Set up Lean and fetch the Mathlib cache
         uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
-      # `sorry` is only a warning, so check explicitly that the main theorems depend only on the
-      # allowed axioms listed in `CheckAxioms.lean`. This also rules out `sorry` and `axiom`.
-      - name: Check axioms
+          build: false
+      - name: Check the proofs
         working-directory: lean
-        run: lake env lean CheckAxioms.lean
+        run: |
+          set -o pipefail
+          lake build 2>&1 | tee "$RUNNER_TEMP/build.log" || {
+            sed -nE 's|^error: ([^ :]+\.lean):([0-9]+):([0-9]+): (.*)$|::error file=lean/\1,line=\2,col=\3,title=Proof failed::\4|p' \
+              "$RUNNER_TEMP/build.log"
+            exit 1
+          }
