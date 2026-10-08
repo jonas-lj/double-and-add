@@ -62,12 +62,8 @@ jobs:
       - name: Build the remaining proofs
         working-directory: lean
         run: lake build
-      # `sorry` is only a warning, so check explicitly that the main theorems don't depend on it.
-      - name: Check for sorry
+      # `sorry` is only a warning, so check explicitly that the main theorems depend only on the
+      # allowed axioms listed in `CheckAxioms.lean`. This also rules out `sorry` and `axiom`.
+      - name: Check axioms
         working-directory: lean
-        run: |
-          echo 'import DoubleAndAddSpec
-          #print axioms double_and_add.double_and_add_spec
-          #print axioms double_and_add.double_and_add_eq_doubleAndAdd' > "$RUNNER_TEMP/Axioms.lean"
-          lake env lean "$RUNNER_TEMP/Axioms.lean" | tee "$RUNNER_TEMP/axioms.txt"
-          ! grep -q sorryAx "$RUNNER_TEMP/axioms.txt"
+        run: lake env lean CheckAxioms.lean
