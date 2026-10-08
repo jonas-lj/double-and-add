@@ -17,37 +17,7 @@ set_option maxHeartbeats 1000000
 /- You can set the `maxRecDepth` value with the `-max-recdepth` CLI option -/
 set_option maxRecDepth 2048
 
-/- You can remove the following line by using the CLI option `-all-computable`: -/
-noncomputable section
-
 namespace double_and_add
-
-/-- [core::iter::adapters::zip::{impl core::iter::traits::iterator::Iterator<(Clause0_Item, Clause1_Item)> for core::iter::adapters::zip::Zip<A, B>}::fold]:
-    Source: '/rustc/library/core/src/iter/adapters/zip.rs', lines 97:4-99:41
-    Name pattern: [core::iter::adapters::zip::{core::iter::traits::iterator::Iterator<core::iter::adapters::zip::Zip<@A, @B>, (@Clause0_Item, @Clause1_Item)>}::fold]
-    Visibility: public -/
-@[rust_fun
-  "core::iter::adapters::zip::{core::iter::traits::iterator::Iterator<core::iter::adapters::zip::Zip<@A, @B>, (@Clause0_Item, @Clause1_Item)>}::fold"]
-axiom core.iter.adapters.zip.Zip.Insts.CoreIterTraitsIteratorIteratorPair.fold
-  {A : Type} {B : Type} {Acc : Type} {F : Type} {Clause0_Item : Type}
-  {Clause1_Item : Type} (traitsiteratorIteratorInst :
-  core.iter.traits.iterator.Iterator A Clause0_Item)
-  (traitsiteratorIteratorInst1 : core.iter.traits.iterator.Iterator B
-  Clause1_Item) (opsfunctionFnMutFPairAccPairAccInst : core.ops.function.FnMut
-  F (Acc × (Clause0_Item × Clause1_Item)) Acc) :
-  core.iter.adapters.zip.Zip A B → Acc → F → Result Acc
-
-/-- [core::iter::traits::iterator::Iterator::fold]:
-    Source: '/rustc/library/core/src/iter/traits/iterator.rs', lines 2674:4-2677:64
-    Name pattern: [core::iter::traits::iterator::Iterator::fold]
-    Visibility: public -/
-@[trait_default, rust_fun "core::iter::traits::iterator::Iterator::fold"]
-axiom core.iter.traits.iterator.Iterator.fold.default
-  {Self : Type} {B : Type} {F : Type} {Clause0_Item : Type} (IteratorInst :
-  core.iter.traits.iterator.Iterator Self Clause0_Item)
-  (opsfunctionFnMutFPairBInst : core.ops.function.FnMut F (B × Clause0_Item)
-  B) :
-  Self → B → F → Result B
 
 /-- Trait declaration: [core::ops::arith::Add]
     Source: '/rustc/library/core/src/ops/arith.rs', lines 76:0-76:31
@@ -57,17 +27,6 @@ axiom core.iter.traits.iterator.Iterator.fold.default
 structure core.ops.arith.Add (Self : Type) (Rhs : Type) (Self_Output : Type)
   where
   add : Self → Rhs → Result Self_Output
-
-/-- [core::slice::iter::{impl core::iter::traits::iterator::Iterator<&'a T> for core::slice::iter::Iter<'a, T>}::fold]:
-    Source: '/rustc/library/core/src/slice/iter/macros.rs', lines 254:12-256:49
-    Name pattern: [core::slice::iter::{core::iter::traits::iterator::Iterator<core::slice::iter::Iter<'a, @T>, &'a @T>}::fold]
-    Visibility: public -/
-@[rust_fun
-  "core::slice::iter::{core::iter::traits::iterator::Iterator<core::slice::iter::Iter<'a, @T>, &'a @T>}::fold"]
-axiom core.slice.iter.Iter.Insts.CoreIterTraitsIteratorIteratorSharedAT.fold
-  {T : Type} {B : Type} {F : Type} (opsfunctionFnMutFPairBSharedATBInst :
-  core.ops.function.FnMut F (B × T) B) :
-  core.slice.iter.Iter T → B → F → Result B
 
 /-- Trait declaration: [num_traits::identities::Zero]
     Source: '/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-traits-0.2.19/src/identities.rs', lines 12:0-12:48
@@ -102,71 +61,50 @@ def double_and_add
     else num_traitsidentitiesZeroInst.coreopsarithAddInst.add half half
 partial_fixpoint
 
-/-- [double_and_add::multi_scalar_mul::{closure}]
-    Source: 'src/lib.rs', lines 35:25-37:9 -/
-@[reducible]
-def multi_scalar_mul.closure (T : Type) := Unit
-
-/-- [double_and_add::multi_scalar_mul::{impl core::ops::function::FnMut<(T, (&'_0 T, &'_1 u64)), T> for double_and_add::multi_scalar_mul::{closure}<T>}::call_mut]:
-    Source: 'src/lib.rs', lines 35:25-37:9 -/
-def
-  multi_scalar_mul.closure.Insts.CoreOpsFunctionFnMutPairTPairShared0TShared1U64T.call_mut
+/-- [double_and_add::multi_scalar_mul]: loop body 0:
+    Source: 'src/lib.rs', lines 33:4-35:5
+    Visibility: public -/
+@[rust_loop_body]
+def multi_scalar_mul_loop.body
   {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
-  (coremarkerCopyInst : core.marker.Copy T) (c : multi_scalar_mul.closure T)
-  (tupled_args : (T × (T × Std.U64))) :
-  Result (T × (multi_scalar_mul.closure T))
+  (coremarkerCopyInst : core.marker.Copy T)
+  (iter : core.iter.adapters.zip.Zip (core.slice.iter.Iter T)
+  (core.slice.iter.Iter Std.U64)) (acc : T) :
+  Result (ControlFlow ((core.iter.adapters.zip.Zip (core.slice.iter.Iter T)
+    (core.slice.iter.Iter Std.U64)) × T) T)
   := do
-  let (acc, (point, scalar)) := tupled_args
-  let t ←
-    double_and_add num_traitsidentitiesZeroInst coremarkerCopyInst point scalar
-  let t1 ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add acc t
-  ok (t1, c)
+  let (o, iter1) ←
+    core.iter.adapters.zip.Zip.Insts.CoreIterTraitsIteratorIteratorPair.next
+      (core.iter.traits.iterator.IteratorSliceIter T)
+      (core.iter.traits.iterator.IteratorSliceIter Std.U64) iter
+  match o with
+  | none => ok (done acc)
+  | some p =>
+    let (point, scalar) := p
+    let t ←
+      double_and_add num_traitsidentitiesZeroInst coremarkerCopyInst point
+        scalar
+    let acc1 ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add acc t
+    ok (cont (iter1, acc1))
 
-/-- [double_and_add::multi_scalar_mul::{impl core::ops::function::FnOnce<(T, (&'_0 T, &'_1 u64)), T> for double_and_add::multi_scalar_mul::{closure}<T>}::call_once]:
-    Source: 'src/lib.rs', lines 35:25-37:9 -/
-def
-  multi_scalar_mul.closure.Insts.CoreOpsFunctionFnOncePairTPairShared0TShared1U64T.call_once
+/-- [double_and_add::multi_scalar_mul]: loop 0:
+    Source: 'src/lib.rs', lines 33:4-35:5
+    Visibility: public -/
+@[rust_loop]
+def multi_scalar_mul_loop
   {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
-  (coremarkerCopyInst : core.marker.Copy T) (c : multi_scalar_mul.closure T)
-  (p : (T × (T × Std.U64))) :
+  (coremarkerCopyInst : core.marker.Copy T)
+  (iter : core.iter.adapters.zip.Zip (core.slice.iter.Iter T)
+  (core.slice.iter.Iter Std.U64)) (acc : T) :
   Result T
   := do
-  let (t, _) ←
-    multi_scalar_mul.closure.Insts.CoreOpsFunctionFnMutPairTPairShared0TShared1U64T.call_mut
-      num_traitsidentitiesZeroInst coremarkerCopyInst c p
-  ok t
-
-/-- Trait implementation: [double_and_add::multi_scalar_mul::{impl core::ops::function::FnOnce<(T, (&'_0 T, &'_1 u64)), T> for double_and_add::multi_scalar_mul::{closure}<T>}]
-    Source: 'src/lib.rs', lines 35:25-37:9 -/
-@[reducible]
-def
-  multi_scalar_mul.closure.Insts.CoreOpsFunctionFnOncePairTPairShared0TShared1U64T
-  {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
-  (coremarkerCopyInst : core.marker.Copy T) : core.ops.function.FnOnce
-  (multi_scalar_mul.closure T) (T × (T × Std.U64)) T := {
-  call_once :=
-    multi_scalar_mul.closure.Insts.CoreOpsFunctionFnOncePairTPairShared0TShared1U64T.call_once
-    num_traitsidentitiesZeroInst coremarkerCopyInst
-}
-
-/-- Trait implementation: [double_and_add::multi_scalar_mul::{impl core::ops::function::FnMut<(T, (&'_0 T, &'_1 u64)), T> for double_and_add::multi_scalar_mul::{closure}<T>}]
-    Source: 'src/lib.rs', lines 35:25-37:9 -/
-@[reducible]
-def
-  multi_scalar_mul.closure.Insts.CoreOpsFunctionFnMutPairTPairShared0TShared1U64T
-  {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
-  (coremarkerCopyInst : core.marker.Copy T) : core.ops.function.FnMut
-  (multi_scalar_mul.closure T) (T × (T × Std.U64)) T := {
-  FnOnceInst :=
-    multi_scalar_mul.closure.Insts.CoreOpsFunctionFnOncePairTPairShared0TShared1U64T
-    num_traitsidentitiesZeroInst coremarkerCopyInst
-  call_mut :=
-    multi_scalar_mul.closure.Insts.CoreOpsFunctionFnMutPairTPairShared0TShared1U64T.call_mut
-    num_traitsidentitiesZeroInst coremarkerCopyInst
-}
+  loop
+    (fun (iter1, acc1) => multi_scalar_mul_loop.body
+      num_traitsidentitiesZeroInst coremarkerCopyInst iter1 acc1)
+    (iter, acc)
 
 /-- [double_and_add::multi_scalar_mul]:
-    Source: 'src/lib.rs', lines 28:0-38:1
+    Source: 'src/lib.rs', lines 28:0-37:1
     Visibility: public -/
 def multi_scalar_mul
   {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
@@ -174,17 +112,14 @@ def multi_scalar_mul
   (scalars : Slice Std.U64) :
   Result T
   := do
+  let acc ← num_traitsidentitiesZeroInst.zero
   let i ← core.slice.Slice.iter points
-  let z ←
+  let iter ←
     core.iter.traits.iterator.Iterator.zip.trait_default
       (core.iter.traits.iterator.IteratorSliceIter T)
       (SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter Std.U64) i
       scalars
-  let t ← num_traitsidentitiesZeroInst.zero
-  core.iter.adapters.zip.Zip.Insts.CoreIterTraitsIteratorIteratorPair.fold
-    (core.iter.traits.iterator.IteratorSliceIter T)
-    (core.iter.traits.iterator.IteratorSliceIter Std.U64)
-    (multi_scalar_mul.closure.Insts.CoreOpsFunctionFnMutPairTPairShared0TShared1U64T
-    num_traitsidentitiesZeroInst coremarkerCopyInst) z t ()
+  multi_scalar_mul_loop num_traitsidentitiesZeroInst coremarkerCopyInst iter
+    acc
 
 end double_and_add

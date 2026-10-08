@@ -56,4 +56,61 @@ theorem double_and_add_spec (zeroInst : num_traits.identities.Zero T)
 
 #check_axioms double_and_add_spec
 
+omit [AddMonoid T] in
+/-- One iteration of the `multi_scalar_mul` loop. -/
+private theorem multi_scalar_mul_loop_unfold (zeroInst : num_traits.identities.Zero T)
+    (copyInst : core.marker.Copy T)
+    (iter : core.iter.adapters.zip.Zip (core.slice.iter.Iter T) (core.slice.iter.Iter U64))
+    (acc : T) :
+    multi_scalar_mul_loop zeroInst copyInst iter acc =
+      multi_scalar_mul_loop.body zeroInst copyInst iter acc >>= fun r =>
+        match r with
+        | ControlFlow.cont (iter1, acc1) => multi_scalar_mul_loop zeroInst copyInst iter1 acc1
+        | ControlFlow.done acc1 => ok acc1 := by
+  conv => lhs; unfold multi_scalar_mul_loop; rw [loop]
+  congr 1
+  funext r
+  rcases r with ⟨iter1, acc1⟩ | acc1 <;> rfl
+
+/-- The `multi_scalar_mul` loop, started with both iterators at index `i`, adds
+`scalars[j] • points[j]` to `acc` for every remaining index `j`. -/
+private theorem multi_scalar_mul_loop_spec (zeroInst : num_traits.identities.Zero T)
+    (copyInst : core.marker.Copy T) (h : ImplementsAddMonoid zeroInst)
+    (points : Slice T) (scalars : Slice U64) (i : ℕ) (acc : T) :
+    multi_scalar_mul_loop zeroInst copyInst ⟨⟨points, i⟩, ⟨scalars, i⟩⟩ acc =
+      ok (acc + (((points.val.zip scalars.val).drop i).map
+        (fun (point, scalar) => scalar.val • point)).sum) := by
+  rw [multi_scalar_mul_loop_unfold]
+  unfold multi_scalar_mul_loop.body
+  simp only [core.iter.adapters.zip.Zip.Insts.CoreIterTraitsIteratorIteratorPair.next,
+    core.slice.iter.IteratorSliceIter.next]
+  by_cases hp : i < points.val.length
+  · by_cases hs : i < scalars.val.length
+    · have hlen : i < (points.val.zip scalars.val).length := by simp; omega
+      rw [List.drop_eq_getElem_cons hlen]
+      simp [hp, hs, double_and_add_spec zeroInst copyInst h, h.add_ok,
+        multi_scalar_mul_loop_spec zeroInst copyInst h points scalars (i + 1), add_assoc]
+      rfl
+    · rw [List.drop_eq_nil_of_le (by simp; omega)]
+      simp [hp, hs]
+  · rw [List.drop_eq_nil_of_le (by simp; omega)]
+    simp [hp]
+termination_by points.val.length - i
+
+/-- Correctness of multi-scalar multiplication: for any type whose `Zero` instance implements an
+additive monoid, `multi_scalar_mul points scalars` succeeds and returns
+`∑ i, scalars[i] • points[i]`, over the indices of the shorter slice. -/
+theorem multi_scalar_mul_spec (zeroInst : num_traits.identities.Zero T)
+    (copyInst : core.marker.Copy T) (h : ImplementsAddMonoid zeroInst)
+    (points : Slice T) (scalars : Slice U64) :
+    multi_scalar_mul zeroInst copyInst points scalars =
+      ok ((points.val.zip scalars.val).map (fun (point, scalar) => scalar.val • point)).sum := by
+  unfold multi_scalar_mul
+  simp [h.zero_ok, core.slice.Slice.iter, core.iter.traits.iterator.Iterator.zip.trait_default,
+    core.iter.traits.iterator.Iterator.zip.default,
+    SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter.into_iter,
+    multi_scalar_mul_loop_spec zeroInst copyInst h]
+
+#check_axioms multi_scalar_mul_spec
+
 end double_and_add
