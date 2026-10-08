@@ -38,3 +38,34 @@ where
     }
     acc
 }
+
+/// Computes the multi-scalar multiplication `scalars[0] * P_0 + scalars[1] * P_1 + ...` with a
+/// window of `W` bits, where `tables[j][i]` must be `i * P_j` for `i` in `0..N` and `N = 2^W`.
+/// `+` on `T` must be commutative.
+///
+/// # Panics
+///
+/// Panics if `W` is not between 1 and 63, if `N` is not `2^W`, or if `tables` and `scalars` have
+/// different lengths.
+pub fn windowed_msm<T, const W: u32, const N: usize>(tables: &[[T; N]], scalars: &[u64]) -> T
+where
+    T: Zero + Copy,
+{
+    assert!(0 < W && W < u64::BITS);
+    assert!(N as u64 == 1 << W);
+    assert!(tables.len() == scalars.len());
+    let mut acc = T::zero();
+    // Aeneas has no model of `div_ceil`.
+    #[allow(clippy::manual_div_ceil)]
+    let windows = (u64::BITS + W - 1) / W;
+    for window in (0..windows).rev() {
+        for _ in 0..W {
+            acc = acc + acc;
+        }
+        for (table, &scalar) in tables.iter().zip(scalars) {
+            let digit = (scalar >> (window * W)) & (N as u64 - 1);
+            acc = acc + table[digit as usize];
+        }
+    }
+    acc
+}
