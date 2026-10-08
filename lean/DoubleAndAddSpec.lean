@@ -339,24 +339,17 @@ theorem windowed_msm_spec [ImplementsAddMonoid zeroInst] (W : U32) {N : Usize} (
       exact Nat.div_eq_of_lt (lt_of_lt_of_le this (Nat.pow_le_pow_right (by norm_num) hge))
     rw [h0, window_loop W nw points tables scalars hlt hN htables hlen, WP.spec_ok]
     rfl
-  -- The number of windows is `⌈64 / W⌉`.
-  have hdm := Nat.div_add_mod 64 W.val
-  have hml := Nat.mod_lt 64 h1
+  -- The number of windows is `⌈64 / W⌉ = ⌊(64 + W − 1) / W⌋`.
+  step as ⟨x, hx⟩
+  step as ⟨y, hy⟩
   step as ⟨q, hq⟩
-  step as ⟨r, hr⟩
-  simp only [UScalarTy.numBits] at hq hr
-  have hqW : q.val * W.val = W.val * (64 / W.val) := by rw [hq, Nat.mul_comm]
-  by_cases hr0 : r.val = 0
-  · simp only [show (r != 0#u32) = false by simp; scalar_tac, Bool.false_eq_true, ↓reduceIte,
-      bind_ok]
-    apply hloop q
-    · omega
-    · rw [Nat.sub_mul, one_mul]; omega
-  · simp only [show (r != 0#u32) = true by simp; scalar_tac, ↓reduceIte]
-    step as ⟨q1, hq1⟩
-    apply hloop q1
-    · rw [hq1, Nat.add_mul, one_mul]; omega
-    · rw [hq1, Nat.add_sub_cancel]; omega
+  simp only [UScalarTy.numBits] at hx
+  have hdm := Nat.div_add_mod y.val W.val
+  have hml := Nat.mod_lt y.val h1
+  have hqW : q.val * W.val = W.val * (y.val / W.val) := by rw [hq, Nat.mul_comm]
+  apply hloop q
+  · omega
+  · rw [Nat.sub_mul, one_mul]; omega
 
 omit [AddCommMonoid T] in
 /-- **`windowed_msm` rejects invalid window parameters.**

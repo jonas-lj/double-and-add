@@ -55,11 +55,10 @@ where
     assert!(N as u64 == 1 << W);
     assert!(tables.len() == scalars.len());
     let mut acc = T::zero();
-    // The number of windows, `ceil(64 / W)`. Aeneas has no model of `u32::div_ceil`.
-    let mut window = u64::BITS / W;
-    if u64::BITS % W != 0 {
-        window += 1;
-    }
+    // The number of windows, `ceil(64 / W)`. Not `u64::BITS.div_ceil(W)`, since Aeneas has no
+    // model of `u32::div_ceil`.
+    #[allow(clippy::manual_div_ceil)]
+    let mut window = (u64::BITS + W - 1) / W;
     while window > 0 {
         window -= 1;
         for _ in 0..W {
