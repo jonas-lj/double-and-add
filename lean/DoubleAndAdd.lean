@@ -125,4 +125,148 @@ def multi_scalar_mul
   multi_scalar_mul_loop num_traitsidentitiesZeroInst coremarkerCopyInst iter
     acc
 
+/-- [double_and_add::windowed_msm]: loop body 1:
+    Source: 'src/lib.rs', lines 65:8-67:9
+    Visibility: public -/
+@[rust_loop_body]
+def windowed_msm_loop0_loop0.body
+  {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
+  (iter : core.ops.range.Range Std.U32) (acc : T) :
+  Result (ControlFlow ((core.ops.range.Range Std.U32) × T) T)
+  := do
+  let (o, iter1) ←
+    core.iter.range.IteratorRange.next core.iter.range.StepU32 iter
+  match o with
+  | none => ok (done acc)
+  | some _ =>
+    let acc1 ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add acc acc
+    ok (cont (iter1, acc1))
+
+/-- [double_and_add::windowed_msm]: loop 1:
+    Source: 'src/lib.rs', lines 65:8-67:9
+    Visibility: public -/
+@[rust_loop]
+def windowed_msm_loop0_loop0
+  {T : Type} (num_traitsidentitiesZeroInst : num_traits.identities.Zero T)
+  (iter : core.ops.range.Range Std.U32) (acc : T) :
+  Result T
+  := do
+  loop
+    (fun (iter1, acc1) => windowed_msm_loop0_loop0.body
+      num_traitsidentitiesZeroInst iter1 acc1)
+    (iter, acc)
+
+/-- [double_and_add::windowed_msm]: loop body 2:
+    Source: 'src/lib.rs', lines 68:8-71:9
+    Visibility: public -/
+@[rust_loop_body]
+def windowed_msm_loop0_loop1.body
+  {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
+  num_traits.identities.Zero T) (window : Std.U32)
+  (iter : core.iter.adapters.zip.Zip (core.slice.iter.Iter (Array T N))
+  (core.slice.iter.Iter Std.U64)) (acc : T) :
+  Result (ControlFlow ((core.iter.adapters.zip.Zip (core.slice.iter.Iter (Array
+    T N)) (core.slice.iter.Iter Std.U64)) × T) T)
+  := do
+  let (o, iter1) ←
+    core.iter.adapters.zip.Zip.Insts.CoreIterTraitsIteratorIteratorPair.next
+      (core.iter.traits.iterator.IteratorSliceIter (Array T N))
+      (core.iter.traits.iterator.IteratorSliceIter Std.U64) iter
+  match o with
+  | none => ok (done acc)
+  | some p =>
+    let (table, scalar) := p
+    let i ← window * W
+    let i1 ← scalar >>> i
+    let i2 ← lift (UScalar.cast .U64 N)
+    let i3 ← i2 - 1#u64
+    let digit ← lift (i1 &&& i3)
+    let i4 ← lift (UScalar.cast .Usize digit)
+    let t ← Array.index_usize table i4
+    let acc1 ← num_traitsidentitiesZeroInst.coreopsarithAddInst.add acc t
+    ok (cont (iter1, acc1))
+
+/-- [double_and_add::windowed_msm]: loop 2:
+    Source: 'src/lib.rs', lines 68:8-71:9
+    Visibility: public -/
+@[rust_loop]
+def windowed_msm_loop0_loop1
+  {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
+  num_traits.identities.Zero T)
+  (iter : core.iter.adapters.zip.Zip (core.slice.iter.Iter (Array T N))
+  (core.slice.iter.Iter Std.U64)) (acc : T) (window : Std.U32) :
+  Result T
+  := do
+  loop
+    (fun (iter1, acc1) => windowed_msm_loop0_loop1.body W
+      num_traitsidentitiesZeroInst window iter1 acc1)
+    (iter, acc)
+
+/-- [double_and_add::windowed_msm]: loop body 0:
+    Source: 'src/lib.rs', lines 63:4-72:5
+    Visibility: public -/
+@[rust_loop_body]
+def windowed_msm_loop0.body
+  {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
+  num_traits.identities.Zero T) (tables : Slice (Array T N))
+  (scalars : Slice Std.U64) (acc : T) (window : Std.U32) :
+  Result (ControlFlow (T × Std.U32) T)
+  := do
+  if window > 0#u32
+  then
+    let window1 ← window - 1#u32
+    let acc1 ←
+      windowed_msm_loop0_loop0 num_traitsidentitiesZeroInst
+        { start := 0#u32, «end» := W } acc
+    let i ← core.slice.Slice.iter tables
+    let iter ←
+      core.iter.traits.iterator.Iterator.zip.trait_default
+        (core.iter.traits.iterator.IteratorSliceIter (Array T N))
+        (SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter Std.U64)
+        i scalars
+    let acc2 ←
+      windowed_msm_loop0_loop1 W num_traitsidentitiesZeroInst iter acc1 window1
+    ok (cont (acc2, window1))
+  else ok (done acc)
+
+/-- [double_and_add::windowed_msm]: loop 0:
+    Source: 'src/lib.rs', lines 63:4-72:5
+    Visibility: public -/
+@[rust_loop]
+def windowed_msm_loop0
+  {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
+  num_traits.identities.Zero T) (tables : Slice (Array T N))
+  (scalars : Slice Std.U64) (acc : T) (window : Std.U32) :
+  Result T
+  := do
+  loop
+    (fun (acc1, window1) => windowed_msm_loop0.body W
+      num_traitsidentitiesZeroInst tables scalars acc1 window1)
+    (acc, window)
+
+/-- [double_and_add::windowed_msm]:
+    Source: 'src/lib.rs', lines 50:0-74:1
+    Visibility: public -/
+def windowed_msm
+  {T : Type} (W : Std.U32) {N : Std.Usize} (num_traitsidentitiesZeroInst :
+  num_traits.identities.Zero T) (coremarkerCopyInst : core.marker.Copy T)
+  (tables : Slice (Array T N)) (scalars : Slice Std.U64) :
+  Result T
+  := do
+  massert (0#u32 < W)
+  massert (W < core.num.U64.BITS)
+  let i ← lift (UScalar.cast .U64 N)
+  let i1 ← 1#u64 <<< W
+  massert (i = i1)
+  let i2 := Slice.len tables
+  let i3 := Slice.len scalars
+  massert (i2 = i3)
+  let acc ← num_traitsidentitiesZeroInst.zero
+  let window ← core.num.U64.BITS / W
+  let i4 ← core.num.U64.BITS % W
+  let window1 ← if i4 != 0#u32
+                  then window + 1#u32
+                  else ok window
+  windowed_msm_loop0 W num_traitsidentitiesZeroInst tables scalars acc window1
+
 end double_and_add

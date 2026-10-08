@@ -8,9 +8,61 @@ what needs reviewing.
 open Aeneas Aeneas.Std Result
 
 /-- Converts a spec in Aeneas's `⦃ ⦄` form, as produced by `loop.spec_decr_nat`, to `= ok`. -/
-theorem eq_ok_of_spec {α : Type} {m : Result α} {v : α} (h : m ⦃ (· = v) ⦄) : m = ok v := by
+lemma eq_ok_of_spec {α : Type} {m : Result α} {v : α} (h : m ⦃ (· = v) ⦄) : m = ok v := by
   obtain ⟨r, hr, rfl⟩ := WP.spec_imp_exists h
   exact hr
+
+/-- A `usize` value always fits in a `u64`, whether `usize` has 32 or 64 bits. -/
+lemma Usize.val_le_U64_max (x : Usize) : x.val ≤ UScalar.max .U64 := by
+  have : x.val ≤ Usize.max := by scalar_tac
+  rcases Usize.bounds_eq with h | h <;> simp [h, U32.max_eq, U64.max_eq] at this ⊢ <;> omega
+
+/-! ## Weighted sums -/
+
+/-- `weightedSum f [(x₀, c₀), (x₁, c₁), …] = f c₀ • x₀ + f c₁ • x₁ + ⋯`. -/
+def weightedSum {T C : Type} [AddMonoid T] (f : C → ℕ) (pairs : List (T × C)) : T :=
+  (pairs.map fun (x, c) => f c • x).sum
+
+lemma weightedSum_nil {T C : Type} [AddMonoid T] (f : C → ℕ) :
+    weightedSum f ([] : List (T × C)) = 0 := rfl
+
+lemma weightedSum_cons {T C : Type} [AddMonoid T] (f : C → ℕ) (x : T) (c : C)
+    (pairs : List (T × C)) :
+    weightedSum f ((x, c) :: pairs) = f c • x + weightedSum f pairs := rfl
+
+lemma weightedSum_zero {T C : Type} [AddMonoid T] (pairs : List (T × C)) :
+    weightedSum (fun _ => 0) pairs = 0 := by
+  simp [weightedSum]
+
+lemma weightedSum_add {T C : Type} [AddCommMonoid T] (f g : C → ℕ) (pairs : List (T × C)) :
+    weightedSum (fun c => f c + g c) pairs = weightedSum f pairs + weightedSum g pairs := by
+  induction pairs with
+  | nil => simp [weightedSum]
+  | cons p ps ih =>
+    obtain ⟨x, c⟩ := p
+    rw [weightedSum_cons, weightedSum_cons, weightedSum_cons, ih, add_nsmul]
+    abel
+
+lemma weightedSum_mul {T C : Type} [AddCommMonoid T] (k : ℕ) (f : C → ℕ)
+    (pairs : List (T × C)) :
+    weightedSum (fun c => k * f c) pairs = k • weightedSum f pairs := by
+  induction pairs with
+  | nil => simp [weightedSum]
+  | cons p ps ih =>
+    obtain ⟨x, c⟩ := p
+    rw [weightedSum_cons, weightedSum_cons, ih, smul_add, smul_smul]
+
+lemma weightedSum_congr {T C : Type} [AddMonoid T] {f g : C → ℕ} (pairs : List (T × C))
+    (h : ∀ c, f c = g c) : weightedSum f pairs = weightedSum g pairs := by
+  simp [weightedSum, h]
+
+/-! ## Digits -/
+
+/-- Splitting off the lowest `w` bits of `x >>> (i * w)`. -/
+lemma shiftRight_succ_mul (x i w : ℕ) :
+    2 ^ w * (x >>> ((i + 1) * w)) + (x >>> (i * w)) % 2 ^ w = x >>> (i * w) := by
+  rw [Nat.add_mul, one_mul, Nat.shiftRight_add, Nat.shiftRight_eq_div_pow (x >>> (i * w)) w]
+  exact Nat.div_add_mod _ _
 
 /-! ## Axiom check
 
