@@ -1,54 +1,13 @@
+import Common
 import DoubleAndAdd
 
 /-!
 Specs of the functions in `src/lib.rs`, proved directly on the Aeneas translation in
-`DoubleAndAdd.lean`. Each spec is followed by `#check_axioms`, so this file fails to build if a
-proof breaks or depends on a `sorry` or an `axiom`, such as a Rust function Aeneas cannot
-translate.
+`DoubleAndAdd.lean`. `CheckAxioms.lean` checks that every theorem here depends only on the allowed
+axioms.
 -/
 
 open Aeneas Aeneas.Std Result
-open Lean Elab Command
-
-/-- The axioms the proofs may depend on: Lean's standard axioms. -/
-def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
-
-/-- The axioms that `root` depends on, and the theorems it depends on whose proofs failed. Lean
-records a proof that fails with an automatically inserted (synthetic) `sorry`. The search stops at
-such a theorem, so `sorryAx` among the axioms means a hand-written `sorry`. -/
-def collectDependencies (env : Environment) (root : Name) : Array Name × Array Name := Id.run do
-  let mut visited : NameSet := {}
-  let mut axs := #[]
-  let mut failed := #[]
-  let mut todo := #[root]
-  while !todo.isEmpty do
-    let n := todo.back!
-    todo := todo.pop
-    if visited.contains n then continue
-    visited := visited.insert n
-    let some info := env.find? n | continue
-    if info matches .axiomInfo _ then
-      axs := axs.push n
-    else if (info.value? (allowOpaque := true)).any (·.hasSyntheticSorry) then
-      failed := failed.push n
-    else
-      todo := todo ++ info.type.getUsedConstants
-      if let some value := info.value? (allowOpaque := true) then
-        todo := todo ++ value.getUsedConstants
-  return (axs, failed)
-
-/-- `#check_axioms foo` fails if `foo` depends on an axiom that is not in `allowedAxioms`, or on a
-theorem whose proof failed. If the proof of `foo` itself failed, Lean has already reported it. -/
-elab "#check_axioms " thm:ident : command => do
-  let constName ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo thm
-  let (axs, failed) := collectDependencies (← getEnv) constName
-  if failed.any (constName.isPrefixOf ·) then return
-  unless failed.isEmpty do
-    let failed := failed.map privateToUserName
-    logError m!"'{constName}' depends on theorems whose proofs failed: {failed}"
-  let disallowed := axs.filter (· ∉ allowedAxioms)
-  unless disallowed.isEmpty do
-    logError m!"'{constName}' depends on disallowed axioms: {disallowed}"
 
 namespace double_and_add
 
@@ -82,13 +41,6 @@ theorem double_and_add_spec (zeroInst : num_traits.identities.Zero T)
     · rw [← add_nsmul]; congr 2
       have : r.val ≠ 1 := fun e => hodd (UScalar.eq_of_val_eq (by simpa using e))
       omega
-
-#check_axioms double_and_add_spec
-
-omit [AddMonoid T] in
-private theorem eq_ok_of_spec {m : Result T} {v : T} (h : m ⦃ (· = v) ⦄) : m = ok v := by
-  obtain ⟨r, hr, rfl⟩ := WP.spec_imp_exists h
-  exact hr
 
 /-- Correctness of multi-scalar multiplication: for any type whose `Zero` instance implements an
 additive monoid, `multi_scalar_mul points scalars` succeeds and returns
@@ -132,7 +84,5 @@ theorem multi_scalar_mul_spec (zeroInst : num_traits.identities.Zero T)
       simp [hp, WP.spec_ok]
       simpa [hnil] using hacc
   · simp
-
-#check_axioms multi_scalar_mul_spec
 
 end double_and_add
