@@ -21,3 +21,18 @@ where
         }
     }
 }
+
+/// Computes the multi-scalar multiplication `scalars[0] * points[0] + scalars[1] * points[1] + ...`.
+///
+/// Extra points or scalars, if the slices have different lengths, are ignored.
+pub fn multi_scalar_mul<T>(points: &[T], scalars: &[u64]) -> T
+where
+    T: Zero + Copy,
+{
+    points
+        .iter()
+        .zip(scalars)
+        .fold(T::zero(), |acc, (&point, &scalar)| {
+            acc + double_and_add(point, scalar)
+        })
+}
