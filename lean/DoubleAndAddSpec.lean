@@ -243,44 +243,45 @@ private lemma digit_loop [ImplementsAddMonoid zeroInst] (W window : U32) {N : Us
       simp [hp, WP.spec_ok, ha]
   · simp
 
-/-- The loop over the windows, started at window `w` with the accumulator
+/-- The loop `for window in (0..w).rev() { … }`, started with the accumulator
 `Σ ⌊sⱼ / 2^(w · W)⌋ · Pⱼ`, returns `Σ sⱼ · Pⱼ`. -/
-private lemma window_loop [ImplementsAddMonoid zeroInst] (W window : U32) {N : Usize}
+private lemma window_loop [ImplementsAddMonoid zeroInst] (W windows : U32) {N : Usize}
     (points : List T) (tables : Slice (Array T N)) (scalars : Slice U64)
-    (hshift : (window.val - 1) * W.val < 64) (hN : N.val = 2 ^ W.val)
+    (hshift : (windows.val - 1) * W.val < 64) (hN : N.val = 2 ^ W.val)
     (htables : tables.val.map (·.val) = points.map (fun point => (List.range N.val).map (· • point)))
     (hlen : points.length = scalars.length) :
-    windowed_msm_loop0 W zeroInst tables scalars
-      (weightedSum (fun s : U64 => s.val >>> (window.val * W.val)) (points.zip scalars.val))
-      window =
+    windowed_msm_loop0 W zeroInst ⟨{ start := 0#u32, «end» := windows }⟩ tables scalars
+      (weightedSum (fun s : U64 => s.val >>> (windows.val * W.val)) (points.zip scalars.val)) =
     ok (weightedSum (fun s : U64 => s.val) (points.zip scalars.val)) := by
   unfold windowed_msm_loop0
   apply eq_ok_of_spec
   apply loop.spec_decr_nat
-    (measure := fun x => x.2.val)
-    (inv := fun x => x.2.val ≤ window.val ∧
-      x.1 = weightedSum (fun s : U64 => s.val >>> (x.2.val * W.val)) (points.zip scalars.val))
-  · rintro ⟨a, w⟩ ⟨hw, ha⟩
-    dsimp only at hw ha ⊢
+    (measure := fun x => x.1.iter.«end».val)
+    (inv := fun x => x.1.iter.start = 0#u32 ∧ x.1.iter.«end».val ≤ windows.val ∧
+      x.2 = weightedSum (fun s : U64 => s.val >>> (x.1.iter.«end».val * W.val))
+        (points.zip scalars.val))
+  · rintro ⟨⟨⟨st, w⟩⟩, a⟩ ⟨hst, hw, ha⟩
+    dsimp only at hst hw ha ⊢
+    subst hst
     unfold windowed_msm_loop0.body
     by_cases hpos : 0 < w.val
-    · have hw1 : (w.val - 1) * W.val < 64 :=
+    · obtain ⟨w1, hw1v, hnext⟩ := rev_range_next_some { start := 0#u32, «end» := w } (by simpa)
+      simp only at hw1v
+      have hw1 : w1.val * W.val < 64 :=
         lt_of_le_of_lt (Nat.mul_le_mul_right _ (by omega)) hshift
-      simp only [show (w > 0#u32) = True by simp; omega, if_true]
-      step as ⟨w1, hw1v⟩
-      rw [doubling_loop]
-      simp only [bind_tc_ok, bind_ok, core.slice.Slice.iter,
+      rw [hnext]
+      simp only [bind_tc_ok, bind_ok, doubling_loop, core.slice.Slice.iter,
         core.iter.traits.iterator.Iterator.zip.trait_default,
         core.iter.traits.iterator.Iterator.zip.default,
         SharedSlice.Insts.CoreIterTraitsCollectIntoIteratorSharedIter.into_iter]
-      rw [digit_loop W w1 points tables scalars _ (by rw [hw1v]; exact hw1) hN htables hlen]
-      simp [WP.spec_ok]
+      simp [digit_loop W w1 points tables scalars _ hw1 hN htables hlen, WP.spec_ok]
       refine ⟨by omega, ?_, by omega⟩
       have hw' : w.val = w1.val + 1 := by omega
       rw [ha, hw', ← weightedSum_mul, ← weightedSum_add]
       exact weightedSum_congr _ fun s => shiftRight_succ_mul s.val w1.val W.val
-    · have hw0 : w.val = 0 := by omega
-      simp [show ¬(w > 0#u32) by simp; omega, WP.spec_ok, ha, hw0]
+    · rw [rev_range_next_none { start := 0#u32, «end» := w } (by simpa using hpos)]
+      have hw0 : w.val = 0 := by omega
+      simp [WP.spec_ok, ha, hw0]
   · simp
 
 /-- The check `N as u64 == 1 << W` in `windowed_msm` succeeds in computing both sides, and they are
@@ -328,7 +329,7 @@ theorem windowed_msm_spec [ImplementsAddMonoid zeroInst] (W : U32) {N : Usize} (
   -- The loop over the windows computes the result when started with `0` at any window `nw` with
   -- `(nw - 1) · W < 64 ≤ nw · W`.
   have hloop : ∀ nw : U32, 64 ≤ nw.val * W.val → (nw.val - 1) * W.val < 64 →
-      windowed_msm_loop0 W zeroInst tables scalars 0 nw ⦃ x =>
+      windowed_msm_loop0 W zeroInst ⟨{ start := 0#u32, «end» := nw }⟩ tables scalars 0 ⦃ x =>
         x = ((points.zip scalars.val).map (fun (point, scalar) => scalar.val • point)).sum ⦄ := by
     intro nw hge hlt
     have h0 : (0 : T) =
@@ -347,6 +348,8 @@ theorem windowed_msm_spec [ImplementsAddMonoid zeroInst] (W : U32) {N : Usize} (
   have hdm := Nat.div_add_mod y.val W.val
   have hml := Nat.mod_lt y.val h1
   have hqW : q.val * W.val = W.val * (y.val / W.val) := by rw [hq, Nat.mul_comm]
+  simp only [core.iter.traits.iterator.Iterator.rev.trait_default,
+    core.iter.traits.iterator.Iterator.rev.default, bind_ok]
   apply hloop q
   · omega
   · rw [Nat.sub_mul, one_mul]; omega

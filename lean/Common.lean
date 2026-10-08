@@ -17,6 +17,30 @@ lemma Usize.val_le_U64_max (x : Usize) : x.val ≤ UScalar.max .U64 := by
   have : x.val ≤ Usize.max := by scalar_tac
   rcases Usize.bounds_eq with h | h <;> simp [h, U32.max_eq, U64.max_eq] at this ⊢ <;> omega
 
+/-! ## Reversed ranges -/
+
+/-- `(start..end).rev().next()` on `u32`, non-empty case: yields `end - 1` and shrinks the range. -/
+lemma rev_range_next_some (r : core.ops.range.Range U32) (h : r.start.val < r.«end».val) :
+    ∃ e : U32, e.val = r.«end».val - 1 ∧
+      core.iter.adapters.rev.Rev.Insts.CoreIterTraitsIteratorIterator.next
+        (core.ops.range.Range.Insts.DoubleEndedIterator core.iter.range.StepU32) ⟨r⟩ =
+      ok (some e, ⟨{ start := r.start, «end» := e }⟩) := by
+  refine ⟨UScalar.ofNatCore (r.«end».val - 1) (by scalar_tac), by simp, ?_⟩
+  have h1 : 1 ≤ r.«end».val := by omega
+  simp [core.iter.adapters.rev.Rev.Insts.CoreIterTraitsIteratorIterator.next,
+    core.ops.range.Range.Insts.CoreIterTraitsDoubleEndedIterator.next_back,
+    core.iter.range.UScalarStep, core.iter.range.UScalarStep.backward_checked,
+    core.cmp.impls.PartialOrdU32.lt, h, h1]
+
+/-- `(start..end).rev().next()` on `u32`, empty case: yields nothing. -/
+lemma rev_range_next_none (r : core.ops.range.Range U32) (h : ¬ r.start.val < r.«end».val) :
+    core.iter.adapters.rev.Rev.Insts.CoreIterTraitsIteratorIterator.next
+      (core.ops.range.Range.Insts.DoubleEndedIterator core.iter.range.StepU32) ⟨r⟩ =
+    ok (none, ⟨r⟩) := by
+  simp [core.iter.adapters.rev.Rev.Insts.CoreIterTraitsIteratorIterator.next,
+    core.ops.range.Range.Insts.CoreIterTraitsDoubleEndedIterator.next_back,
+    core.iter.range.UScalarStep, core.cmp.impls.PartialOrdU32.lt, h]
+
 /-! ## Weighted sums -/
 
 /-- `weightedSum f [(x₀, c₀), (x₁, c₁), …] = f c₀ • x₀ + f c₁ • x₁ + ⋯`. -/

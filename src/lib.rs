@@ -57,9 +57,8 @@ where
     let mut acc = T::zero();
     // Aeneas has no model of `div_ceil`.
     #[allow(clippy::manual_div_ceil)]
-    let mut window = (u64::BITS + W - 1) / W;
-    while window > 0 {
-        window -= 1;
+    let windows = (u64::BITS + W - 1) / W;
+    for window in (0..windows).rev() {
         for _ in 0..W {
             acc = acc + acc;
         }
