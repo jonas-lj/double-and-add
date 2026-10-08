@@ -9,3 +9,5 @@ package «double_and_add» {}
 
 @[default_target] lean_lib DoubleAndAdd
 @[default_target] lean_lib DoubleAndAddSpec
+@[default_target] lean_lib Common
+@[default_target] lean_lib CheckAxioms
