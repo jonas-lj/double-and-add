@@ -37,6 +37,37 @@ class ImplementsAddMonoid (zeroInst : num_traits.identities.Zero T) : Prop where
 
 variable {zeroInst : num_traits.identities.Zero T} {copyInst : core.marker.Copy T}
 
+/-- **Base case of `double_and_add`.**
+
+Under `ImplementsAddMonoid`, `double_and_add(b, 0)` returns `0` for all `b ∈ T`. -/
+theorem double_and_add_zero [ImplementsAddMonoid zeroInst] (base : T) :
+    double_and_add zeroInst copyInst base 0#u64 = ok 0 := by
+  unfold double_and_add
+  simp [ImplementsAddMonoid.zero_ok]
+
+/-- **Recursive case of `double_and_add`.**
+
+Under `ImplementsAddMonoid`, for all `b, h ∈ T` and `n ∈ {1, …, 2⁶⁴ − 1}`: if
+`double_and_add(b, ⌊n / 2⌋)` returns `h`, then `double_and_add(b, n)` returns `h + h + b` if `n` is
+odd, and `h + h` if `n` is even. -/
+theorem double_and_add_step [ImplementsAddMonoid zeroInst] (base half : T) (n : U64) :
+    n.val ≠ 0 →
+    (∀ m : U64, m.val = n.val / 2 → double_and_add zeroInst copyInst base m = ok half) →
+    double_and_add zeroInst copyInst base n =
+      ok (if n.val % 2 = 1 then half + half + base else half + half) := by
+  intro hn hrec
+  have h0 : n ≠ 0#u64 := fun e => hn (by simp [e])
+  obtain ⟨m, hm, hmv⟩ := WP.spec_imp_exists (U64.div_spec n (y := 2#u64) (by decide))
+  obtain ⟨r, hr, hrv⟩ := WP.spec_imp_exists (U64.rem_spec n (y := 2#u64) (by decide))
+  simp at hmv hrv
+  have hodd : r = 1#u64 ↔ n.val % 2 = 1 := by
+    constructor
+    · intro e; have := congrArg UScalar.val e; simp at this; omega
+    · intro e; exact UScalar.eq_of_val_eq (by simp; omega)
+  unfold double_and_add
+  simp only [h0, if_false, hm, hr, ImplementsAddMonoid.add_ok]
+  by_cases ho : n.val % 2 = 1 <;> simp [ho, hodd, hrec m hmv]
+
 /-- **Correctness of `double_and_add`.**
 
 Let `(T, +, 0)` be an additive monoid whose Rust `Zero` and `Add` implementations compute `0` and
@@ -48,21 +79,15 @@ theorem double_and_add_spec [ImplementsAddMonoid zeroInst] (base : T) (n : U64) 
     double_and_add zeroInst copyInst base n = ok (n.val • base) := by
   induction hk : n.val using Nat.strong_induction_on generalizing n with
   | _ k ih =>
-  unfold double_and_add
-  split_ifs with h0
-  · subst h0; subst hk; simp [ImplementsAddMonoid.zero_ok]
-  · have hn : n.val ≠ 0 := fun e => h0 (UScalar.eq_of_val_eq e)
-    obtain ⟨m, hm, hmv⟩ := WP.spec_imp_exists (U64.div_spec n (y := 2#u64) (by decide))
-    obtain ⟨r, hr, hrv⟩ := WP.spec_imp_exists (U64.rem_spec n (y := 2#u64) (by decide))
-    simp at hmv hrv
-    have hlt : m.val < k := by omega
-    simp [hm, hr, ih m.val hlt m rfl, ImplementsAddMonoid.add_ok]
-    split_ifs with hodd
-    · rw [← add_nsmul, ← succ_nsmul]; congr 2
-      have := congrArg UScalar.val hodd; simp at this; omega
-    · rw [← add_nsmul]; congr 2
-      have : r.val ≠ 1 := fun e => hodd (UScalar.eq_of_val_eq (by simpa using e))
-      omega
+  by_cases hn : n.val = 0
+  · obtain rfl : n = 0#u64 := UScalar.eq_of_val_eq (by simpa using hn)
+    subst hk
+    simp [double_and_add_zero]
+  · rw [double_and_add_step base ((k / 2) • base) n hn
+      (fun m hm => by rw [ih m.val (by omega) m rfl, hm, hk])]
+    split_ifs
+    · rw [← add_nsmul, ← succ_nsmul]; congr 2; omega
+    · rw [← add_nsmul]; congr 2; omega
 
 /-- **Correctness of `multi_scalar_mul`.**
 
