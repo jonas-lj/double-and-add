@@ -1,16 +1,9 @@
-import Aeneas
+import Lean
 
 /-!
 Project-wide definitions used by the specs, kept out of the spec files so those contain only
 what needs reviewing.
 -/
-
-open Aeneas Aeneas.Std Result
-
-/-- Converts a spec in Aeneas's `⦃ ⦄` form, as produced by `loop.spec_decr_nat`, to `= ok`. -/
-theorem eq_ok_of_spec {α : Type} {m : Result α} {v : α} (h : m ⦃ (· = v) ⦄) : m = ok v := by
-  obtain ⟨r, hr, rfl⟩ := WP.spec_imp_exists h
-  exact hr
 
 /-! ## Axiom check
 
