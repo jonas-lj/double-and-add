@@ -10,8 +10,8 @@ pub fn double_and_add<T>(base: T, scalar: u64) -> T
 where
     T: Zero + Copy,
 {
-    if scalar == 0 {
-        T::zero()
+    if scalar == 1 {
+        base
     } else {
         let half = double_and_add(base, scalar / 2);
         if scalar % 2 == 1 {

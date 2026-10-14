@@ -47,8 +47,8 @@ def double_and_add
   (coremarkerCopyInst : core.marker.Copy T) (base : T) (scalar : Std.U64) :
   Result T
   := do
-  if scalar = 0#u64
-  then num_traitsidentitiesZeroInst.zero
+  if scalar = 1#u64
+  then ok base
   else
     let i ← scalar / 2#u64
     let half ←
